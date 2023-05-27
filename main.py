@@ -1,6 +1,6 @@
-
-# Find the eigenvalues of the laplacian matrix
-# Find
+# Class: MA398
+# Author: Carson Crovo
+# Date: 5-27-23
 
 def main():
     pass

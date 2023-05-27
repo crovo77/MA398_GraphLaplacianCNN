@@ -14,6 +14,12 @@ import config
 
 class Calculate:
     @staticmethod
+    def scaled_laplacian(frames: np.ndarray[np.ndarray[np.ndarray[np.float32]]]) -> spr.csr_matrix[np.float32]:
+        laplacian = Calculate.graph_laplacian(frames)
+        max_eigen, max_vect = spr.linalg.eigen.eigsh(laplacian, k=1, which='LM')
+        return (2. / max_eigen[0]) * laplacian - spr.eye(laplacian.shape[0])
+
+    @staticmethod
     def graph_laplacian(frames: np.ndarray[np.ndarray[np.ndarray[np.float32]]]) -> spr.csr_matrix[np.float32]:
         adj_matrix =\
             Calculate._temporal_splice(frames, config.SIGMA2) if config.SPLICE == 'temporal' else\
