@@ -11,13 +11,34 @@ import scipy.sparse.linalg.eigen
 from itertools import repeat
 import config
 
+# Create Demo code
+# Look closer at gcn framework at training vs. learning stage to find how results are combined.
+
 
 class Calculate:
+    # @staticmethod
+    # def scaled_laplacian(frames: np.ndarray[np.ndarray[np.ndarray[np.float32]]]) -> spr.csr_matrix[np.float32]:
+    #     laplacian = Calculate.graph_laplacian(frames)
+    #     max_eigen, max_vect = spr.linalg.eigen.eigsh(laplacian, k=1, which='LM')
+    #     return (2. / max_eigen[0]) * laplacian - spr.eye(laplacian.shape[0])
+
     @staticmethod
-    def scaled_laplacian(frames: np.ndarray[np.ndarray[np.ndarray[np.float32]]]) -> spr.csr_matrix[np.float32]:
-        laplacian = Calculate.graph_laplacian(frames)
-        max_eigen, max_vect = spr.linalg.eigen.eigsh(laplacian, k=1, which='LM')
-        return (2. / max_eigen[0]) * laplacian - spr.eye(laplacian.shape[0])
+    def get_x_eigen(matrix: spr.csr_matrix[np.float32], min_eigen: int, tolerance: np.float32)\
+            -> tuple[np.ndarray[np.float32], np.ndarray[np.ndarray[np.float32]]]:
+        while True:
+            max_eigen, max_vect = spr.linalg.eigen.eigsh(matrix, k=min_eigen, which='LM')
+            error = spr.linalg.norm(Calculate.restore_laplacian(max_eigen, max_vect) - matrix)
+            if error < tolerance: return max_eigen, max_vect
+            min_eigen *= 2
+
+    @staticmethod
+    def restore_laplacian(eigenvalues: np.ndarray[np.float32], eigenvectors: np.ndarray[np.ndarray[np.float32]])\
+            -> spr.csr_matrix[np.float32]:
+        n = eigenvectors.shape[1]
+        laplacian = np.zeros((n, n))
+        for (val, vect) in zip(eigenvalues, eigenvectors):
+            laplacian += val * vect @ vect.T
+        return spr.csr_matrix(laplacian, dtype=np.float32)
 
     @staticmethod
     def graph_laplacian(frames: np.ndarray[np.ndarray[np.ndarray[np.float32]]]) -> spr.csr_matrix[np.float32]:
