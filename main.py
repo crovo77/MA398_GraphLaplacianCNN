@@ -11,14 +11,22 @@ import numpy as np
 
 
 def main():
-    video = utils.read_video("./RawData")
-    print("video length is", len(video))
-    laplacian = utils.Calculate.graph_laplacian(video)
-    # laplacian = np.array([[6, -1, -2, -3],
-    #                       [-1, 1, 0, 0],
-    #                       [-2, 0, 6, -4],
-    #                       [-3, 0, -4, 7]], dtype=np.float32)
-    # laplacian = spr.csr_matrix(laplacian)
+    # video = utils.read_video("./RawData")
+    # print("video length is", len(video))
+    # laplacian = utils.Calculate.graph_laplacian(video)
+    laplacian = np.array([[6, -1, -2, -3],
+                          [-1, 1, 0, 0],
+                          [-2, 0, 6, -4],
+                          [-3, 0, -4, 7]], dtype=np.float32)
+    laplacian = spr.csr_matrix(laplacian)
+    deg_matrix = [6, 1, 6, 7]
+    norm_deg = spr.spdiags(np.power(deg_matrix, -0.5), 0, 4, 4)
+    laplacian = laplacian @ norm_deg
+    laplacian = norm_deg @ laplacian
+    print("normalized is", laplacian)
+
+
+
     # print("laplacian shape is", laplacian.shape)
     # val, vect = lg.eigsh(laplacian.toarray(), k=2, which='LM')
     # vect = vect.T
@@ -30,9 +38,11 @@ def main():
     # plt.plot(val)
     # plt.show()
 
-    val, vect, error = utils.Calculate.get_x_eigen(laplacian, tolerance=50)
-    print(val.size)
-    print(error)
+    val, vect, error = utils.Calculate.get_x_eigen(laplacian, tolerance=0.1)
+    print("total eigenvalues kept", val.size)
+    print("error is", error)
+    print("eigenvalues", val)
+    print("eigenvectors", vect)
 
 
 # Press the green button in the gutter to run the script.
