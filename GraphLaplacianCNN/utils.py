@@ -1,6 +1,6 @@
 # Class: MA398
 # Author: Carson Crovo
-# Date: 4-3-23
+# Date: 6-30-23
 
 import os
 import cv2
@@ -11,22 +11,13 @@ import scipy.sparse.linalg.eigen
 from itertools import repeat
 from GraphLaplacianCNN import config
 
-# Create Demo code
-# Look closer at gcn framework at training vs. learning stage to find how results are combined.
-
 
 class Calculate:
-    # @staticmethod
-    # def scaled_laplacian(frames: np.ndarray[np.ndarray[np.ndarray[np.float32]]]) -> spr.csr_matrix[np.float32]:
-    #     laplacian = Calculate.graph_laplacian(frames)
-    #     max_eigen, max_vect = spr.linalg.eigen.eigsh(laplacian, k=1, which='LM')
-    #     return (2. / max_eigen[0]) * laplacian - spr.eye(laplacian.shape[0])
-
     @staticmethod
-    def get_x_eigen(matrix: spr.csr_matrix, tolerance: float) ->\
+    def get_x_eigen(matrix: spr.csr_matrix, tolerance: float) -> \
             tuple[np.ndarray[np.float32], np.ndarray[np.ndarray[np.float32]], float]:
-        all_eigen, all_vect = scipy.linalg.eigh(matrix.toarray())
-        if tolerance <= 0: return all_eigen, all_vect, 0
+        all_eigen, all_vect = scipy.linalg.eigh(matrix.toarray())  # Find all eigenvalues only once
+        if tolerance <= 0: return all_eigen, all_vect, 0  # If no tolerance allowed, then return all eigenvalues
         all_vect = all_vect.T
         first = 0
         last = all_eigen.size
@@ -34,15 +25,18 @@ class Calculate:
             mid = (first + last) // 2
             error2 = spr.linalg.norm(matrix - Calculate.restore_laplacian(all_eigen[(mid + 1):], all_vect[(mid + 1):]))
             error1 = spr.linalg.norm(matrix - Calculate.restore_laplacian(all_eigen[mid:], all_vect[mid:]))
-            # print("Num vals:", all_eigen.size - mid)
-            # print("Error1 is", error1, "Error2 is", error2)
-            if error1 > tolerance: last = mid
-            elif error2 <= tolerance: first = mid + 1
-            else: return all_eigen[mid:], all_vect[mid:], error1
-        return np.array([]), np.array([]), tolerance
+            print("Num vals:", all_eigen.size - mid)
+            print("Error1 is", error1, "Error2 is", error2)
+            if error1 > tolerance:
+                last = mid
+            elif error2 <= tolerance:
+                first = mid + 1
+            else:
+                return all_eigen[mid:], all_vect[mid:], error1
+        return all_eigen, all_vect, 0
 
     @staticmethod
-    def restore_laplacian(eigenvalues: np.ndarray[np.float32], eigenvectors: np.ndarray[np.ndarray[np.float32]])\
+    def restore_laplacian(eigenvalues: np.ndarray[np.float32], eigenvectors: np.ndarray[np.ndarray[np.float32]]) \
             -> spr.csr_matrix:
         n = eigenvectors.shape[1]
         laplacian = np.zeros((n, n))
@@ -52,9 +46,9 @@ class Calculate:
 
     @staticmethod
     def graph_laplacian(frames: np.ndarray[np.ndarray[np.ndarray[np.float32]]]) -> spr.csr_matrix:
-        adj_matrix =\
-            Calculate._temporal_splice(frames, config.SIGMA2) if config.SPLICE == 'temporal' else\
-            Calculate._spatial_splice(frames, config.K, config.SIGMA2)
+        adj_matrix = \
+            Calculate._temporal_splice(frames, config.SIGMA2) if config.SPLICE == 'temporal' else \
+                Calculate._spatial_splice(frames, config.K, config.SIGMA2)
         return Calculate.adj_to_laplacian(adj_matrix, config.LAPLACIAN_METHOD)
 
     @staticmethod
@@ -70,12 +64,12 @@ class Calculate:
         elif method == 'random':
             d_inverse = spr.spdiags(np.power(sums, -1), 0, sums.size, sums.size)
             return d_inverse @ L
-        raise Exception("Invalid 'method' parameter provided for method graph_laplacian.")
+        raise ValueError("Invalid 'method' parameter provided.")
 
     @staticmethod
-    def _temporal_splice(frames: np.ndarray[np.ndarray[np.ndarray[np.float32]]], sigma2: float)\
+    def _temporal_splice(frames: np.ndarray[np.ndarray[np.ndarray[np.float32]]], sigma2: float) \
             -> spr.csr_matrix:
-        if sigma2 <= 50000: warnings.showwarning("'sigma2' parameter may be too low.", UserWarning, 'utils.py', 40)
+        if sigma2 <= 50000: warnings.warn("'sigma2' parameter may be too low.", UserWarning)
 
         m = len(frames)  # num frames
         n = frames[0].size  # num pixels
@@ -90,9 +84,7 @@ class Calculate:
 
     @staticmethod
     def _spatial_splice(frames: np.ndarray[np.ndarray[np.ndarray[np.float32]]], k: int, sigma2: float):
-        if sigma2 <= 50000: warnings.showwarning("'sigma2' parameter may be too low.", UserWarning, 'utils.py', 56)
-        if k <= 0: raise Exception("'k' parameter was negative.")
-
+        if sigma2 <= 50000: warnings.warn("'sigma2' parameter may be too low.", UserWarning)
         # converts frames in 3d: n x m1 x m2 into voxels in 2d: (m1 * m2) x n (or m x n)
         # total is 76800 x 410
         voxels = np.array(frames).reshape(len(frames), -1).T
@@ -108,7 +100,7 @@ class Calculate:
         adj = []
         # Iterate over all 'neighboring' pairs of indices
         for i, neighbors in enumerate(index_matrix):
-            neighbors = np.unique(neighbors)
+            neighbors = np.unique(neighbors)  # prevents values from being incorrectly doubled
             for j in neighbors:  # for each neighboring pair:
                 if j < i and i in index_matrix[j]: continue  # skip calculating what has already been calculated
                 # For adjacency matrix (using patch) use ||N_p(Vi)-N_p(Vj)||_F^2 (Frobenius norm)
@@ -122,6 +114,7 @@ class Calculate:
     @staticmethod
     # This method calculates the 'k' nearest neighboring indices for each index in a 2d matrix with 'shape' dimensions
     def _k_nearest(shape: tuple[int, int], k: int) -> np.ndarray[np.ndarray[int]]:
+        if k <= 0: raise ValueError("'k' parameter must be positive.")
         # Approximate ray-casting radius based on k
         radius = int(np.ceil(np.sqrt((k + 1) / np.pi))) + 1
 
