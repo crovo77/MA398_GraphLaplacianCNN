@@ -48,7 +48,7 @@ class Calculate:
     def graph_laplacian(frames: np.ndarray[np.ndarray[np.ndarray[np.float32]]]) -> spr.csr_matrix:
         adj_matrix = \
             Calculate._temporal_splice(frames, config.SIGMA2) if config.SPLICE == 'temporal' else \
-                Calculate._spatial_splice(frames, config.K, config.SIGMA2)
+            Calculate._spatial_splice(frames, config.K, config.SIGMA2)
         return Calculate.adj_to_laplacian(adj_matrix, config.LAPLACIAN_METHOD)
 
     @staticmethod

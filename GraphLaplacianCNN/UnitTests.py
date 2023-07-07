@@ -101,10 +101,10 @@ class TestCalculations(unittest.TestCase):
         )
         np.testing.assert_allclose(
             np.array([
-                [1,         0,   -1/8,  -3/10],  # unnormalized / 2
-                [0,         1,  -1/12,  -8/15],  # unnormalized / 3
-                [-1/8,  -1/12,      1, -14/20],  # unnormalized / 4
-                [-3/10, -8/15, -14/20,      1]   # unnormalized / 5
+                [1, 0, -1 / 8, -3 / 10],  # unnormalized / 2
+                [0, 1, -1 / 12, -8 / 15],  # unnormalized / 3
+                [-1 / 8, -1 / 12, 1, -14 / 20],  # unnormalized / 4
+                [-3 / 10, -8 / 15, -14 / 20, 1]  # unnormalized / 5
                 # /2      /3      /4      /5
             ]),
             Calculate.adj_to_laplacian(
@@ -112,60 +112,49 @@ class TestCalculations(unittest.TestCase):
                     [0, 0, 1, 3],  # row sum 4
                     [0, 0, 1, 8],  # row sum 9
                     [1, 1, 0, 14],  # row sum 16
-                    [3, 8, 14, 0]   # row sum 25
+                    [3, 8, 14, 0]  # row sum 25
                 ])), method='symmetric').todense()
         )
         np.testing.assert_allclose(
             np.array([
-                [1,         0,   -1/4,  -3/4],  # unnormalized / 4
-                [0,         1,  -1/9,  -8/9],  # unnormalized / 9
-                [-1/16,  -1/16,      1, -14/16],  # unnormalized / 16
-                [-3/25, -8/25, -14/25,      1]   # unnormalized / 25
+                [1, 0, -1 / 4, -3 / 4],  # unnormalized / 4
+                [0, 1, -1 / 9, -8 / 9],  # unnormalized / 9
+                [-1 / 16, -1 / 16, 1, -14 / 16],  # unnormalized / 16
+                [-3 / 25, -8 / 25, -14 / 25, 1]  # unnormalized / 25
             ]),
             Calculate.adj_to_laplacian(
                 spr.csr_matrix(np.array([
                     [0, 0, 1, 3],  # row sum 4
                     [0, 0, 1, 8],  # row sum 9
                     [1, 1, 0, 14],  # row sum 16
-                    [3, 8, 14, 0]   # row sum 25
+                    [3, 8, 14, 0]  # row sum 25
                 ])), method='random').todense()
         )
         with self.assertRaisesRegex(ValueError, "Invalid 'method' parameter provided"):
             Calculate.adj_to_laplacian(spr.csr_matrix([[0]]), method='incorrect_argument')
 
-    # TODO: Incorrect code for restore_laplacian which cannot restore matrices from eigenvalues/vectors
     def test_restore_laplacian(self):
-        np.testing.assert_allclose(
-            np.array([
-                [6, -1, -2, -3],
-                [-1, 1, 0, 0],
-                [-2, 0, 6, -4],
-                [-3, 0, -4, 7]
-            ]),
-            Calculate.restore_laplacian(
-                eigenvalues=np.array([6 + np.sqrt(23), 8, 6 - np.sqrt(23)]),
-                eigenvectors=np.array([
-                    np.array([1 - np.sqrt(23), -14 + (3 * np.sqrt(23)), 2 - (2 * np.sqrt(23)), 11]) / 11,
-                    [-7, 1, 5, 1],
-                    np.array([1 + np.sqrt(23), -14 - (3 * np.sqrt(23)), 2 + (2 * np.sqrt(23)), 11]) / 11
-                ])
-            ).todense()
+        r05 = np.sqrt(0.5)
+        r2 = np.sqrt(2)
+        self.assertAlmostEqual(
+            0,
+            np.linalg.norm(
+                np.array([
+                    [1, -r05, 0],
+                    [-r05, 1, -r05],
+                    [0, -r05, 1]
+                ], dtype=np.float32)
+                - Calculate.restore_laplacian(
+                    eigenvalues=np.array([2, 1, 0]),
+                    eigenvectors=np.array([
+                        [1 / 2, -r2 / 2, 1 / 2],
+                        [-1 / r2, 0, 1 / r2],
+                        [1 / 2, r2 / 2, 1 / 2]
+                    ])
+                ).todense()
+            ),
+            places=12
         )
-        # np.testing.assert_allclose(
-        #     np.array([
-        #         [1, -6, -1],
-        #         [-6, 6, -6],
-        #         [-1, -6, 1]
-        #     ]),
-        #     Calculate.restore_laplacian(
-        #         eigenvalues=np.array([1, -2, 2]),
-        #         eigenvectors=np.array([
-        #             [1, 0, -1],
-        #             [1, 1, 1],
-        #             [-1, 2, -1]
-        #         ])
-        #     ).todense()
-        # )
 
     # def test_get_x_eigen(self):
     #     pass
